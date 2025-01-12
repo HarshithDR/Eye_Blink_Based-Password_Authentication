@@ -1,0 +1,4 @@
+- install visual studio 2019 with cmake optiion selected (https://visualstudio.microsoft.com/visual-cpp-build-tools/.)
+- cmake install from website (https://cmake.org/download/)
+- requirements installation
+- 
