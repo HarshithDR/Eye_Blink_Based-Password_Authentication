@@ -2,7 +2,9 @@ import pickle
 from pathlib import Path
 from collections import Counter
 import face_recognition
-
+import time
+import cv2
+    
 Encodings_path = Path("encodings_output/encodings.pkl")
 
 def save_pkl(encodings, Encodings_path) -> None:
@@ -20,8 +22,8 @@ def add_face_encodings(person_name, face_encodings, Encodings_path) -> None:
     
 
 def encode_face(Encodings_path = Encodings_path, 
-                person_name, 
-                train_folder_path, 
+                person_name : str, 
+                train_folder_path: Path, 
                 model: str = "hog") -> None:
     image = face_recognition.load_image_file(train_folder_path)
 
@@ -69,3 +71,10 @@ def recognize_faces(
         
     return faces_n_image_names
 
+def capture_img():
+    camera = cv2.VideoCapture(0)
+    for i in range(10):
+        time.sleep(1)
+        return_value, image = camera.read()
+        cv2.imwrite("\\backend\\Face_recognition\\temp_imgs\\",'temp'+str(i)+'.png', image)
+    del(camera)
