@@ -9,7 +9,7 @@ from .face_recognition import train_face, recognize_face
 
 
 from face_recognition import train_face, recognize_face
-from blink_detection import detect_blink
+from backend.Blink_password_detection.blink_detection import detect_blink
 
 app = FastAPI()
 
