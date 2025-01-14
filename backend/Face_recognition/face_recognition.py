@@ -71,10 +71,11 @@ def recognize_faces(
         
     return faces_n_image_names
 
-def capture_img():
+def capture_img() -> None:
+    time.sleep(1)
     camera = cv2.VideoCapture(0)
     for i in range(10):
-        time.sleep(1)
+        time.sleep(0.1)
         return_value, image = camera.read()
         cv2.imwrite("\\backend\\Face_recognition\\temp_imgs\\",'temp'+str(i)+'.png', image)
     del(camera)
