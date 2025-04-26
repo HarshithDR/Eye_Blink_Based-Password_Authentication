@@ -8,6 +8,93 @@ body {
     margin: 0;
 }
 
+
+.container.login-container {
+    max-width: 900px; /* Adjust as needed for side-by-side view */
+    width: 95%;
+}
+
+/* Center login area content */
+#login-area {
+    text-align: center;
+}
+
+/* New Flexbox container for side-by-side layout */
+.login-flex-container {
+    display: flex;
+    justify-content: center; /* Center items horizontally */
+    align-items: flex-start; /* Align items to the top */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens if necessary */
+    gap: 30px; /* Space between video and keypad */
+    margin-top: 20px;
+}
+
+/* Video Feed Container Styling (mostly unchanged) */
+#video-feed-container {
+    /* Keep width/height defined in HTML or here */
+    width: 480px;
+    height: 360px;
+    border: 1px solid #ddd;
+    background-color: #222;
+    flex-shrink: 0; /* Prevent video container from shrinking */
+    position: relative; /* For potential future overlays */
+}
+#video-feed-container video,
+#video-feed-container img {
+    display: block; width: 100%; height: 100%; object-fit: cover;
+}
+
+
+/* PIN Entry Area Styling (Adjust width/margins) */
+#pin-entry-area {
+    /* Remove centering margins, flexbox handles positioning */
+    /* margin-left: auto; margin-right: auto; */
+    margin-top: 0; /* Align with top of video */
+    padding: 15px; /* Slightly reduce padding */
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    width: 260px; /* Adjust width of keypad area */
+    /* max-width: 300px; */ /* Removed max-width */
+    flex-shrink: 0; /* Prevent shrinking */
+    text-align: center; /* Center content inside */
+}
+
+#pin-entry-area h3 {
+    margin-top: 0; margin-bottom: 10px; font-size: 0.9em; color: #666;
+}
+
+#pin-display {
+    font-size: 1.2em; margin-bottom: 15px; letter-spacing: 6px;
+    font-weight: bold; color: #333; min-height: 25px;
+    background-color: #fff; padding: 5px 8px; border-radius: 4px; border: 1px solid #ccc;
+}
+
+/* Keypad Container and Button Styling (adjust size/padding slightly) */
+.keypad-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px; /* Reduce gap */
+    margin-top: 10px;
+}
+
+.keypad-button {
+    background-color: #e9ecef; border: 1px solid #ced4da;
+    padding: 12px 0; /* Reduce padding */
+    text-align: center; font-size: 1.4em; /* Reduce font size */
+    font-weight: bold; color: #495057; border-radius: 5px;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    cursor: default; user-select: none;
+}
+
+.keypad-button.keypad-empty { background-color: transparent; border: none; }
+
+.keypad-button.highlighted {
+    background-color: #007bff; border-color: #0056b3; color: #fff;
+    box-shadow: 0 0 6px rgba(0, 123, 255, 0.5);
+    transform: scale(1.03);
+}
+
 .container {
     background-color: #fff;
     padding: 30px;
@@ -69,6 +156,10 @@ h1, h2 {
     text-align: left;
     font-weight: bold;
 }
+
+
+
+
 
 #admin-form input[type="text"],
 #admin-form input[type="password"],
@@ -271,4 +362,146 @@ h1, h2 {
     width: 100%;
     height: 100%;
     object-fit: cover; /* Cover area, might crop slightly */
+}
+
+/* ... (keep existing styles for body, container, buttons, admin, login etc.) ... */
+
+/* --- Dashboard Specific Styles --- */
+.container.dashboard {
+    max-width: 700px; /* Allow slightly wider dashboard */
+    text-align: left; /* Align text left within dashboard */
+}
+
+.dashboard h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #0056b3;
+}
+
+.welcome-user {
+    font-size: 1.2em;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.welcome-user strong {
+    color: #333;
+}
+
+.balance-section, .withdrawal-section {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border: 1px solid #e9ecef;
+}
+
+.balance-section h2, .withdrawal-section h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #495057;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+}
+
+#current-balance {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #28a745; /* Green for balance */
+    text-align: center;
+    margin: 10px 0;
+}
+
+.withdrawal-section label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #555;
+}
+
+.withdrawal-section input[type="number"] {
+    width: calc(100% - 22px); /* Account for padding */
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1.1em;
+}
+
+.btn-preset {
+    background-color: #6c757d;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0 5px 15px 5px;
+    font-size: 0.9em;
+}
+
+.btn-preset:hover {
+    background-color: #5a6268;
+}
+
+.withdraw-btn {
+    background-color: #dc3545; /* Red for withdrawal */
+    padding: 12px 30px;
+    font-size: 1.1em;
+    display: block; /* Make button full width */
+    width: 100%;
+    margin-top: 10px;
+}
+
+.withdraw-btn:hover {
+    background-color: #c82333;
+}
+
+/* Status message styling */
+#withdraw-status {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: bold;
+    display: none; /* Hidden by default */
+}
+
+#withdraw-status.processing {
+    display: block;
+    background-color: #e2e3e5; /* Light gray */
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+
+#withdraw-status.success {
+    display: block;
+    background-color: #d4edda; /* Light green */
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+#withdraw-status.error {
+    display: block;
+    background-color: #f8d7da; /* Light red */
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+
+.divider {
+    border: 0;
+    height: 1px;
+    background-color: #e0e0e0;
+    margin: 30px 0;
+}
+
+.logout-btn {
+    display: block; /* Make logout button full width */
+    width: fit-content; /* Or keep it smaller */
+    margin: 20px auto 0 auto; /* Center */
+    background-color: #6c757d;
+}
+
+.logout-btn:hover {
+    background-color: #5a6268;
 }

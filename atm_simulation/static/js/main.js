@@ -80,13 +80,24 @@ function sendFrame() {
 }
 
 function stopWebcam() {
-    console.log("[Webcam] Attempting to stop webcam and streaming...");
-    if (streamInterval) { clearInterval(streamInterval); streamInterval = null; console.log("[Webcam] Streaming interval cleared."); }
+    console.log("[Webcam] Executing stopWebcam()...");
+    if (streamInterval) {
+        clearInterval(streamInterval);
+        streamInterval = null;
+        console.log("[Webcam] Streaming interval cleared.");
+    } else {
+        console.log("[Webcam] No streaming interval found to clear.");
+    }
     if (videoElement && videoElement.srcObject) {
-        videoElement.srcObject.getTracks().forEach(track => track.stop());
-        videoElement.srcObject = null;
-        console.log("[Webcam] Tracks stopped.");
-    } else { console.log("[Webcam] No active stream found."); }
+        videoElement.srcObject.getTracks().forEach(track => {
+            console.log(`[Webcam] Stopping track: ${track.label} (${track.id})`);
+            track.stop();
+        });
+        videoElement.srcObject = null; // Release object
+        console.log("[Webcam] Media tracks stopped.");
+    } else {
+        console.log("[Webcam] No active stream/srcObject found on video element.");
+    }
 }
 
 // --- Keypad Highlight Helper ---
@@ -236,21 +247,43 @@ function connectSocketIO(pageType) { // pageType: 'admin' or 'user_login'
     });
 
     socket.on('login_result', (data) => {
-        // (Keep login_result logic the same - handles redirect)
-        console.log("[SocketIO] Received 'login_result':", data);
+        console.log("[SocketIO] Received 'login_result':", data); // Log reception
+        const statusMsgElement = getElement('status-message');
+
+        console.log("[SocketIO] Stopping webcam before handling result...");
         stopWebcam();
-        // Ensure UI is reset before redirecting
+
         hideElement('pin-entry-area'); hideElement('welcome-message');
         showElement('video'); hideElement('processed_feed'); getElement('processed_feed').src="";
 
-        if (data.success) {
-            setText('status-message', 'Login Successful! Redirecting...');
-            setTimeout(() => { window.location.href = '/user_dashboard'; }, 1500);
-        } else {
-            setText('status-message', 'Login Failed. Redirecting...');
-            setTimeout(() => { window.location.href = '/login_failed'; }, 1500);
+        if (data.success && data.token) { // Check for success AND token
+            statusMsgElement.textContent = 'Login Successful! Completing login...';
+            console.log(`[SocketIO] Login successful. Got token: ${data.token}. Redirecting via token.`);
+            try {
+                // *** Redirect to the token confirmation route ***
+                window.location.replace(`/confirm_login/${data.token}`);
+            } catch (e) {
+                console.error("[SocketIO] Error during token redirect attempt:", e);
+                // Provide fallback link to general login (token cannot be easily put in link)
+                statusMsgElement.innerHTML = 'Login Success! Redirect failed. Please <a href="/user_login">try logging in again</a>.';
+            }
+        } else if (data.success && !data.token) {
+             // Handle case where backend reported success but didn't send token (error)
+             console.error("[SocketIO] Login reported success, but NO token received!");
+             statusMsgElement.textContent = 'Login Error: Verification incomplete. Please try again.';
+        }
+        else { // Handle explicit failure (data.success is false)
+            statusMsgElement.textContent = 'Login Failed. Redirecting...';
+            console.log("[SocketIO] Login failed. Attempting redirect (replace) to /login_failed");
+             try {
+                window.location.replace('/login_failed');
+             } catch (e) {
+                console.error("[SocketIO] Error during failed redirect attempt:", e);
+                 statusMsgElement.innerHTML = 'Login Failed. <a href="/login_failed">Click here</a>.';
+             }
         }
     });
+
 
 } // End of connectSocketIO
 

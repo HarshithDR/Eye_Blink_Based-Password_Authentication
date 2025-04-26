@@ -8,7 +8,8 @@
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 </head>
 <body>
-    <div class="container">
+    <!-- Make the main container potentially wider -->
+    <div class="container login-container">
          <a href="{{ url_for('index') }}" class="btn back-btn">< Back</a>
          <h1>User Login</h1>
 
@@ -19,36 +20,38 @@
                  <h2>Welcome, <span id="recognized-user-name"></span>!</h2>
              </div>
 
-             <!-- Container for video feeds -->
-             <div id="video-feed-container">
-                 <!-- Live feed (shown during recognition) -->
-                 <video id="video" width="480" height="360" autoplay muted style="display: block;"></video>
-                 <canvas id="canvas" width="480" height="360" style="display: none;"></canvas>
-                 <!-- Processed feed (shown during PIN entry) -->
-                 <img id="processed_feed" src="" alt="Processed Video Feed" width="480" height="360" style="display: none; border: 1px solid lightblue;">
-             </div>
+             <!-- *** New Parent Container for Side-by-Side Layout *** -->
+             <div class="login-flex-container">
 
-
-             <!-- PIN Entry Area with Visual Keypad (hidden initially) -->
-             <div id="pin-entry-area" style="display: none;">
-                 <!-- ... (keep keypad structure as before) ... -->
-                 <h3>Enter PIN by Blinking on Highlighted Digit</h3>
-                 <div id="pin-display">PIN: <span id="pin-so-far"></span></div>
-                 <div class="keypad-container">
-                     <div class="keypad-button" id="keypad-1" data-digit="1">1</div>
-                     <div class="keypad-button" id="keypad-2" data-digit="2">2</div>
-                     <div class="keypad-button" id="keypad-3" data-digit="3">3</div>
-                     <div class="keypad-button" id="keypad-4" data-digit="4">4</div>
-                     <div class="keypad-button" id="keypad-5" data-digit="5">5</div>
-                     <div class="keypad-button" id="keypad-6" data-digit="6">6</div>
-                     <div class="keypad-button" id="keypad-7" data-digit="7">7</div>
-                     <div class="keypad-button" id="keypad-8" data-digit="8">8</div>
-                     <div class="keypad-button" id="keypad-9" data-digit="9">9</div>
-                     <div class="keypad-button keypad-empty"></div>
-                     <div class="keypad-button" id="keypad-0" data-digit="0">0</div>
-                     <div class="keypad-button keypad-empty"></div>
+                 <!-- Video Feed Area -->
+                 <div id="video-feed-container">
+                     <video id="video" width="480" height="360" autoplay muted style="display: block;"></video>
+                     <canvas id="canvas" width="480" height="360" style="display: none;"></canvas>
+                     <img id="processed_feed" src="" alt="Processed Video Feed" width="480" height="360" style="display: none; border: 1px solid lightblue;">
                  </div>
-             </div>
+
+                 <!-- PIN Entry Area (Now adjacent to video) -->
+                 <div id="pin-entry-area" style="display: none;">
+                     <h3>Enter PIN by Blinking</h3>
+                     <div id="pin-display">PIN: <span id="pin-so-far"></span></div>
+                     <div class="keypad-container">
+                         <div class="keypad-button" id="keypad-1" data-digit="1">1</div>
+                         <div class="keypad-button" id="keypad-2" data-digit="2">2</div>
+                         <div class="keypad-button" id="keypad-3" data-digit="3">3</div>
+                         <div class="keypad-button" id="keypad-4" data-digit="4">4</div>
+                         <div class="keypad-button" id="keypad-5" data-digit="5">5</div>
+                         <div class="keypad-button" id="keypad-6" data-digit="6">6</div>
+                         <div class="keypad-button" id="keypad-7" data-digit="7">7</div>
+                         <div class="keypad-button" id="keypad-8" data-digit="8">8</div>
+                         <div class="keypad-button" id="keypad-9" data-digit="9">9</div>
+                         <div class="keypad-button keypad-empty"></div>
+                         <div class="keypad-button" id="keypad-0" data-digit="0">0</div>
+                         <div class="keypad-button keypad-empty"></div>
+                     </div>
+                 </div>
+
+             </div> <!-- End of login-flex-container -->
+
          </div>
     </div>
 
