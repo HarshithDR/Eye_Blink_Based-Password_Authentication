@@ -1,0 +1,20 @@
+{
+    "Albert_Einstein": {
+        "pin": "1234",
+        "balance": 1000.5,
+        "encoding_path": "known_faces/Albert_Einstein/Albert_Einstein_encoding.npy",
+        "image_path": "known_faces/Albert_Einstein/face.jpg"
+    },
+    "Marie_Curie": {
+        "pin": "9876",
+        "balance": 5500.75,
+        "encoding_path": "known_faces/Marie_Curie/Marie_Curie_encoding.npy",
+        "image_path": "known_faces/Marie_Curie/face.jpg"
+    },
+    "harshith": {
+        "pin": "1234",
+        "balance": 10000.0,
+        "encoding_path": "known_faces\\harshith\\harshith_encoding.npy",
+        "image_path": "known_faces\\harshith\\face.jpg"
+    }
+}

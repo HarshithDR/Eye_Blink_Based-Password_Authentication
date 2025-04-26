@@ -1,0 +1,154 @@
+body {
+    font-family: sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.container {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 600px;
+    width: 90%;
+    position: relative; /* For back button positioning */
+}
+
+h1, h2 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.button-container {
+    margin-top: 30px;
+}
+
+.btn {
+    display: inline-block;
+    background-color: #007bff;
+    color: white;
+    padding: 12px 25px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    margin: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #0056b3;
+}
+
+.back-btn {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background-color: #6c757d;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.back-btn:hover {
+    background-color: #5a6268;
+}
+
+
+/* Admin Form Styles */
+#admin-form label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    color: #555;
+    text-align: left;
+    font-weight: bold;
+}
+
+#admin-form input[type="text"],
+#admin-form input[type="password"],
+#admin-form input[type="number"] {
+    width: calc(100% - 22px); /* Account for padding */
+    padding: 10px;
+    margin-bottom: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#admin-form small {
+    display: block;
+    text-align: left;
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 10px;
+}
+
+
+#admin-form button {
+     display: inline-block;
+    background-color: #28a745;
+    color: white;
+    padding: 12px 25px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    margin: 10px;
+    transition: background-color 0.3s ease;
+}
+
+#admin-form button:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+}
+
+#admin-form button:hover:not(:disabled) {
+    background-color: #218838;
+}
+
+#video-container {
+    margin-top: 15px;
+    border: 1px solid #ddd;
+    display: inline-block; /* To center it */
+}
+
+#capture-status, #add-user-status, #status-message {
+    margin-top: 15px;
+    font-weight: bold;
+    min-height: 20px; /* Prevent layout shifts */
+}
+
+#pin-entry-area {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+#pin-display {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+    letter-spacing: 5px; /* Space out asterisks */
+}
+
+#pin-digit-highlight {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #dc3545; /* Highlight color */
+}
+
+#pin-digit-highlight span {
+    display: inline-block;
+    min-width: 30px; /* Ensure space for digit */
+    padding: 5px 10px;
+    border: 2px solid #dc3545;
+    border-radius: 4px;
+    background-color: #fff;
+}

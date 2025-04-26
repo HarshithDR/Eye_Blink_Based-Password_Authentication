@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container">
+         <a href="{{ url_for('index') }}" class="btn back-btn">< Back</a>
+         <h1>User Login</h1>
+
+         <div id="login-area">
+             <div id="status-message">Initializing...</div>
+             <div id="video-container">
+                 <video id="video" width="480" height="360" autoplay muted></video>
+                 <canvas id="canvas" width="480" height="360" style="display: none;"></canvas>
+             </div>
+             <div id="pin-entry-area" style="display: none;">
+                 <h2>Enter PIN by Blinking</h2>
+                 <div id="pin-display">PIN: <span id="pin-so-far"></span></div>
+                 <div id="pin-digit-highlight">Focus on: <span id="current-digit">_</span></div>
+             </div>
+         </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Initialize specifically for user login page
+        setupUserLoginPage();
+    </script>
+</body>
+</html>

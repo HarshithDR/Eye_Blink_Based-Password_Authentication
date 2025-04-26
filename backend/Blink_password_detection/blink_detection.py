@@ -14,4 +14,3 @@ def calculate_EAR(eye):
 
 cam = cv2.VideoCapture(0) 
 
-def 
