@@ -9,29 +9,34 @@ import os
 import json
 import base64
 import time
-# import threading # Not strictly needed with eventlet
+import secrets # For generating secure tokens
+import datetime
 
 from flask import Flask, render_template, Response, request, jsonify, redirect, url_for, session, send_from_directory
 from flask_socketio import SocketIO, emit
 
 # --- Configuration ---
-SECRET_KEY = 'your_very_secret_key_CHANGE_ME_FINAL' # !! CHANGE THIS !!
+SECRET_KEY = 'your_very_secret_key_CHANGE_ME_TOKEN_FIX' # !! CHANGE THIS !!
 KNOWN_FACES_DIR = 'static/known_faces'
 USER_DATA_FILE = 'user_data.json'
 DLIB_SHAPE_PREDICTOR = 'shape_predictor_68_face_landmarks.dat'
 BLINK_THRESH = 0.25      # STARTING GUESS - Adjust based on your printed EAR values
-BLINK_CONSEC_FRAMES = 1 # Require 1 frame for simplicity during debug (can change back to 3 later)
+BLINK_CONSEC_FRAMES = 1  # Require 1 frame for simplicity during debug (can change back to 3 later)
 FACE_REC_TOLERANCE = 0.55
 PIN_LENGTH = 4
 PIN_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-PIN_CYCLE_DELAY = 1.5 # Slightly faster cycle for testing?
+PIN_CYCLE_DELAY = 1.5
+TOKEN_EXPIRY_SECONDS = 30 # Token is valid for 30 seconds
 
 # --- Flask & SocketIO Setup ---
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
-# Ensure session cookie settings are reasonable (optional, defaults usually okay)
-# app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 socketio = SocketIO(app, async_mode='eventlet')
+
+# --- Temporary Token Store ---
+# WARNING: In-memory store is simple but lost on restart and not suitable for multi-process servers.
+# Use Redis or a database for production.
+login_tokens = {} # { token: {'username': 'user', 'expires': datetime_obj} }
 
 # --- Create Directories if Missing ---
 if not os.path.exists(KNOWN_FACES_DIR):
@@ -53,7 +58,6 @@ except Exception as e:
 # --- Load User Data and Known Faces ---
 print("Loading user data and known faces...")
 def load_user_data():
-    # ... (Keep exact same load_user_data function) ...
     if os.path.exists(USER_DATA_FILE):
         try:
             with open(USER_DATA_FILE, 'r') as f:
@@ -62,13 +66,11 @@ def load_user_data():
     return {}
 
 def save_user_data(data):
-    # ... (Keep exact same save_user_data function) ...
     try:
         with open(USER_DATA_FILE, 'w') as f: json.dump(data, f, indent=4)
     except Exception as e: print(f"Error saving user data: {e}")
 
 def load_known_faces():
-    # ... (Keep exact same robust load_known_faces function) ...
     known_encodings_list = []; known_names_list = []; user_data = load_user_data()
     print(f"Attempting to load known faces based on {len(user_data)} user(s)")
     if not os.path.exists(KNOWN_FACES_DIR): print(f"Error: Dir '{KNOWN_FACES_DIR}' missing."); return [], []
@@ -93,12 +95,10 @@ client_states = {}
 
 # --- Helper Functions ---
 def calculate_EAR(eye):
-    # ... (Keep exact same calculate_EAR) ...
     y1 = dist.euclidean(eye[1], eye[5]); y2 = dist.euclidean(eye[2], eye[4])
     x1 = dist.euclidean(eye[0], eye[3]); return (y1 + y2) / (2.0 * x1) if x1 != 0 else 100.0
 
 def decode_image(dataURL):
-    # ... (Keep exact same decode_image) ...
     try:
         encoded_data = dataURL.split(',')[1]; nparr = np.frombuffer(base64.b64decode(encoded_data), np.uint8)
         return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -112,23 +112,45 @@ def admin(): return render_template('admin.html')
 @app.route('/user_login')
 def user_login(): return render_template('user_login.html')
 
+# *** NEW Intermediate Route for Token Confirmation ***
+@app.route('/confirm_login/<token>')
+def confirm_login(token):
+    print(f"[Confirm Login Route] Received token: {token}")
+    token_data = login_tokens.get(token) # Look up token
+
+    if not token_data: # Validate token
+        print("[Confirm Login Route] Error: Token not found.")
+        return redirect(url_for('login_failed', reason='invalid_token'))
+    if datetime.datetime.utcnow() > token_data['expires']: # Check expiry
+        print("[Confirm Login Route] Error: Token expired.")
+        login_tokens.pop(token, None); return redirect(url_for('login_failed', reason='token_expired'))
+
+    username = token_data['username'] # Token is valid! Retrieve username
+    print(f"[Confirm Login Route] Token valid for user: {username}")
+
+    # *** Set the Flask session reliably HERE in standard HTTP context ***
+    session['username'] = username
+    session.modified = True
+    print(f"[Confirm Login Route] Session username SET in HTTP context to: {session.get('username')}")
+
+    login_tokens.pop(token, None) # Invalidate/Remove the used token
+    print(f"[Confirm Login Route] Token invalidated and removed.")
+
+    print("[Confirm Login Route] Redirecting to dashboard...") # Redirect to the actual dashboard
+    return redirect(url_for('user_dashboard'))
+
 @app.route('/user_dashboard')
 def user_dashboard():
     print("[Dashboard Route] Accessing dashboard...")
-    # *** This is the critical read ***
-    username = session.get('username')
-    print(f"[Dashboard Route] Value of session.get('username'): {username}") # Log exactly what is read
-
+    username = session.get('username') # Check session established by confirm_login
+    print(f"[Dashboard Route] Value of session.get('username'): {username}")
     if not username:
-        print("[Dashboard Route] ACCESS DENIED: 'username' not found in session.")
-        return redirect(url_for('user_login')) # Redirect back to login is correct behavior here
-
+        print("[Dashboard Route] ACCESS DENIED: 'username' not in session.")
+        return redirect(url_for('user_login'))
     print(f"[Dashboard Route] User '{username}' OK in session. Loading data...")
-    user_data = load_user_data()
-    user_info = user_data.get(username)
+    user_data = load_user_data(); user_info = user_data.get(username)
     if not user_info:
-         print(f"[Dashboard Route] Error: User '{username}' data missing.")
-         session.clear(); return redirect(url_for('login_failed'))
+         print(f"[Dashboard Route] Error: User '{username}' data missing."); session.clear(); return redirect(url_for('login_failed'))
     balance = user_info.get('balance', 0.0)
     try: balance_formatted = "${:,.2f}".format(float(balance))
     except Exception: balance_formatted = "$ N/A"
@@ -141,7 +163,7 @@ def login_failed(): return render_template('login_failed.html')
 
 @app.route('/withdraw', methods=['POST'])
 def withdraw():
-    # ... (Keep exact same withdraw logic) ...
+    # (Keep exact same withdraw logic)
     print("[Withdraw Route] Request received.")
     username = session.get('username')
     if not username: print("[Withdraw Route] Err: No user in session."); return jsonify({"success": False, "message": "Session expired."}), 401
@@ -150,8 +172,7 @@ def withdraw():
         if amount <= 0: raise ValueError("Amount must be positive.")
     except Exception as e: print(f"[Withdraw Route] Invalid amount: {e}"); return jsonify({"success": False, "message": f"Invalid amount: {e}"}), 400
     print(f"[Withdraw Route] User '{username}' withdrawing ${amount:.2f}")
-    user_data = load_user_data()
-    user_info = user_data.get(username)
+    user_data = load_user_data(); user_info = user_data.get(username)
     if not user_info: print(f"[Withdraw Route] Err: User '{username}' data missing."); return jsonify({"success": False, "message": "User data error."}), 500
     current_balance = float(user_info.get('balance', 0.0))
     if amount > current_balance: print(f"[Withdraw Route] Insufficient funds for '{username}'."); return jsonify({"success": False, "message": "Insufficient funds."}), 400
@@ -159,10 +180,9 @@ def withdraw():
     print(f"[Withdraw Route] Success for '{username}'. New balance: ${new_balance:.2f}")
     return jsonify({"success": True, "message": f"Withdrew ${amount:.2f}.", "new_balance_formatted": "${:,.2f}".format(new_balance)})
 
-
 @app.route('/add_user', methods=['POST'])
 def add_user():
-    # ... (Keep exact same add_user logic) ...
+    # (Keep exact same add_user logic)
     global known_face_encodings, known_face_names; username = request.form.get('username'); pin = request.form.get('pin'); balance = request.form.get('balance')
     if not username or not pin or not balance or not username.isidentifier(): return jsonify({"success": False, "message": "Invalid data."}), 400
     if len(pin) != PIN_LENGTH or not pin.isdigit(): return jsonify({"success": False, "message": f"PIN {PIN_LENGTH} digits."}), 400
@@ -182,23 +202,12 @@ def add_user():
 # --- SocketIO Event Handlers ---
 @socketio.on('connect')
 def handle_connect(): sid = request.sid; print(f'[Socket Connect] Client: {sid}'); client_states[sid] = {'mode': None}
-
-
 @socketio.on('disconnect')
-def handle_disconnect():
-    sid = request.sid
-    print(f'[Socket Disconnect] Client disconnected event received for SID: {sid}')
-    # State might have already been removed by delayed_cleanup on success
-    removed_state = client_states.pop(sid, None)
-    if removed_state:
-        print(f"[Socket Disconnect] State removed for SID {sid} during disconnect event.")
-    else:
-        print(f"[Socket Disconnect] No state found or already removed for SID {sid}.")
-
+def handle_disconnect(): sid = request.sid; print(f'[Socket Disconnect] Client: {sid}'); client_states.pop(sid, None)
 
 @socketio.on('start_admin_capture')
 def handle_start_admin_capture(data):
-    # ... (Keep exact same start_admin_capture logic) ...
+    # (Keep exact same start_admin_capture logic)
     sid = request.sid; username = data.get('username'); print(f"[Admin] Start capture user: {username} (SID: {sid})")
     if not username or not username.isidentifier(): emit('admin_error', {'message': 'Invalid username.'}, room=sid); return
     user_dir_server = os.path.join(KNOWN_FACES_DIR, username)
@@ -207,7 +216,7 @@ def handle_start_admin_capture(data):
 
 @socketio.on('start_user_login')
 def handle_start_user_login():
-    # ... (Keep exact same start_user_login logic) ...
+    # (Keep exact same start_user_login logic)
     sid = request.sid; print(f"[Login] Start event SID: {sid}")
     client_states[sid] = { 'mode': 'recog', 'user': None, 'pin_entered': '', 'blink_counter': 0, 'pin_index': 0, 'last_blink_time': 0, 'pin_last_cycle_time': time.time(), 'recognition_attempts': 0, 'last_recog_emit_time': 0 }
     print(f"[Login] Set mode='recog' SID: {sid}"); global known_face_encodings
@@ -231,15 +240,68 @@ def handle_frame(dataURL):
 
     # --- Mode: Admin Face Capture ---
     if mode == 'admin_capture':
-        # (Keep exact admin logic)
-        # ...
-        pass # Logic is self-contained and doesn't affect user login session
+        # *** START ADMIN DEBUG LOGGING ***
+        print(f"[Admin Capture DBG] SID: {sid} - Processing frame...")
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        face_locations = face_recognition.face_locations(rgb_frame, model='hog')
+        num_faces = len(face_locations)
+        print(f"[Admin Capture DBG] SID: {sid} - Found {num_faces} face(s).")
+        # *** END ADMIN DEBUG LOGGING ***
+
+        capture_success = False
+        status_msg = 'No face detected. Position yourself clearly.' # Default status
+
+        if num_faces == 1: # Check for exactly one face
+            print(f"[Admin Capture DBG] SID: {sid} - Exactly 1 face found. Attempting encoding...")
+            face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+            if face_encodings:
+                print(f"[Admin Capture DBG] SID: {sid} - Encoding successful. Preparing to save...")
+                encoding = face_encodings[0]
+                username = state['username']; user_dir_server = state['user_dir']
+                img_filename = "face.jpg"; img_path_server = os.path.join(user_dir_server, img_filename)
+                encoding_filename = f"{username}_encoding.npy"; encoding_path_server = os.path.join(user_dir_server, encoding_filename)
+                img_path_client = url_for('static', filename=f'known_faces/{username}/{img_filename}') # Generate client URL
+
+                try:
+                    # Save files
+                    print(f"[Admin Capture DBG] SID: {sid} - Saving image to: {img_path_server}")
+                    cv2.imwrite(img_path_server, frame)
+                    print(f"[Admin Capture DBG] SID: {sid} - Saving encoding to: {encoding_path_server}")
+                    np.save(encoding_path_server, encoding)
+
+                    # Log success and emit
+                    print(f"[Admin Capture] SUCCESS: Captured '{username}' (SID: {sid}).")
+                    status_msg = f'Face captured for {username}!'; capture_success = True; state['mode'] = None
+                    emit('admin_capture_success', {'message': status_msg, 'image_path': img_path_client }, room=sid)
+                    print(f"[Admin Capture DBG] SID: {sid} - Emitted admin_capture_success.")
+
+                except Exception as e:
+                    # Log saving error
+                    print(f"[Admin Capture] !!! ERROR saving files for SID {sid}: {e} !!!")
+                    status_msg = f'Error saving capture data: {e}'
+                    # Emit an error status back to the user
+                    emit('admin_error', {'message': status_msg}, room=sid) # Use admin_error for clarity
+
+            else: # Encoding failed
+                status_msg = 'Face detected, but could not create encoding.';
+                print(f"[Admin Capture DBG] SID: {sid} - Encoding failed.")
+
+        elif num_faces > 1: # Multiple faces detected
+             status_msg = 'Multiple faces detected. Only one person please.'
+             print(f"[Admin Capture DBG] SID: {sid} - Multiple faces detected.")
+        # else: num_faces == 0, status_msg remains 'No face detected.'
+
+        # Emit status update only if capture wasn't successful OR if it's still trying
+        if not capture_success and state.get('mode') == 'admin_capture':
+            # Optional: Throttle status messages if needed, but likely okay for admin
+            # print(f"[Admin Capture DBG] SID: {sid} - Emitting admin_status: {status_msg}") # Verify status emit
+            emit('admin_status', {'message': status_msg}, room=sid)
 
     # --- Mode: User Face Recognition ---
     elif mode == 'recog':
+        # (Recognition logic - sets user in state, DOES NOT set session)
         global known_face_encodings, known_face_names
         if not known_face_encodings: return
-
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         face_locations = face_recognition.face_locations(rgb_frame, model='hog')
         recognized_name = None
@@ -254,59 +316,49 @@ def handle_frame(dataURL):
                 if matches[best_match_index] and min_distance < FACE_REC_TOLERANCE:
                     recognized_name = known_face_names[best_match_index]
                     print(f"[Login] SID: {sid} - >>> Face MATCH FOUND: '{recognized_name}' <<<")
-                # else: print(f"[Login] SID: {sid} - No face match.") # Reduce noise
 
         if recognized_name:
-            print(f"[Login] SID: {sid} - Setting session and switching to PIN for '{recognized_name}'.")
-            state['mode'] = 'pin'; state['user'] = recognized_name; state['pin_last_cycle_time'] = time.time()
-            # *** SET SESSION HERE - THIS IS THE CRITICAL POINT ***
-            session['username'] = recognized_name
-            session.modified = True # Mark as modified immediately
-            print(f"[Login] SID: {sid} - Session username SET to: {session.get('username')}")
+            print(f"[Login] SID: {sid} - Switching to PIN mode for '{recognized_name}'. Storing in state.")
+            state['mode'] = 'pin'; state['user'] = recognized_name # Store user in state
+            state['pin_last_cycle_time'] = time.time()
+            # *** NO SESSION SETTING HERE ***
+            print(f"[Login] SID: {sid} - User '{recognized_name}' stored in state.")
             emit('login_status', { 'status': 'pin_entry', 'message': f'Welcome {recognized_name}! Blink...',
                 'user': recognized_name, 'current_digit': PIN_DIGITS[state['pin_index']],
                 'pin_so_far': '*' * len(state['pin_entered']) }, room=sid)
         else: # Throttle 'recognizing' status updates
-            now = time.time()
-            if now - state.get('last_recog_emit_time', 0) > 1.0:
-                msg = 'Looking for face...'
-                if face_locations: msg = 'Face detected, not recognized.'
-                emit('login_status', {'status': 'recognizing', 'message': msg}, room=sid)
-                state['last_recog_emit_time'] = now
+             now = time.time()
+             if now - state.get('last_recog_emit_time', 0) > 1.0:
+                 msg = 'Looking for face...';
+                 if face_locations: msg = 'Face detected, not recognized.'
+                 emit('login_status', {'status': 'recognizing', 'message': msg}, room=sid); state['last_recog_emit_time'] = now
 
 
     # --- Mode: PIN Entry (Blink Detection & Visualization) ---
     elif mode == 'pin':
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_detector(gray_frame)
-        current_time = time.time()
-
-        # --- PIN Digit Cycling Logic ---
-        if current_time - state.get('pin_last_cycle_time', 0) > PIN_CYCLE_DELAY:
-            state['pin_index'] = (state['pin_index'] + 1) % len(PIN_DIGITS)
-            state['pin_last_cycle_time'] = current_time
-            socketio.emit('pin_update', { 'current_digit': PIN_DIGITS[state['pin_index']],
-                 'pin_so_far': '*' * len(state['pin_entered']) }, room=sid)
+        # (Keep PIN digit cycling, EAR calculation, drawing logic)
+        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY); faces = face_detector(gray_frame); current_time = time.time()
+        if current_time - state.get('pin_last_cycle_time', 0) > PIN_CYCLE_DELAY: # Cycle digit
+            state['pin_index'] = (state['pin_index'] + 1) % len(PIN_DIGITS); state['pin_last_cycle_time'] = current_time
+            socketio.emit('pin_update', { 'current_digit': PIN_DIGITS[state['pin_index']], 'pin_so_far': '*' * len(state['pin_entered']) }, room=sid)
 
         avgEAR = -1.0
-        if faces:
+        if faces: # Calculate EAR and draw landmarks
             face = faces[0]; shape = landmark_predictor(gray_frame, face); shape = face_utils.shape_to_np(shape)
-            try: # Calculate EAR & Draw Landmarks
-                leftEye = shape[L_start:L_end]; rightEye = shape[R_start:R_end]
-                leftEAR = calculate_EAR(leftEye); rightEAR = calculate_EAR(rightEye)
+            try:
+                leftEye = shape[L_start:L_end]; rightEye = shape[R_start:R_end]; leftEAR = calculate_EAR(leftEye); rightEAR = calculate_EAR(rightEye)
                 avgEAR = (leftEAR + rightEAR) / 2.0
                 for (x, y) in np.concatenate((leftEye, rightEye)): cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
             except Exception: avgEAR = -2.0
 
-            # --- Blink Detection Logic ---
+            # Blink Detection Logic
             if avgEAR >= 0 and avgEAR < BLINK_THRESH: state['blink_counter'] = state.get('blink_counter', 0) + 1
-            else: # Eyes are open or EAR error
+            else:
                 if state.get('blink_counter', 0) >= BLINK_CONSEC_FRAMES:
                     debounce_time = 0.7
                     if current_time - state.get('last_blink_time', 0) > debounce_time:
                         # === BLINK REGISTERED ===
-                        selected_digit = PIN_DIGITS[state['pin_index']]
-                        state['pin_entered'] += selected_digit
+                        selected_digit = PIN_DIGITS[state['pin_index']]; state['pin_entered'] += selected_digit
                         state['last_blink_time'] = current_time
                         print(f"[Login] SID: {sid} - **** BLINK REGISTERED! Digit: {selected_digit}, PIN: {'*' * len(state['pin_entered'])} ****")
                         state['pin_index'] = 0; state['pin_last_cycle_time'] = current_time
@@ -315,44 +367,35 @@ def handle_frame(dataURL):
                         if len(state['pin_entered']) == PIN_LENGTH:
                             print(f"[Login] SID: {sid} - PIN complete. Verifying...")
                             state['mode'] = 'verifying'; emit('login_status', {'status': 'verifying', 'message': 'Verifying...'}, room=sid)
-                            # --- Verification ---
+                            # Verification Logic
                             user_data = load_user_data(); username_from_state = state.get('user')
                             correct_pin = user_data.get(username_from_state, {}).get('pin'); entered_pin = state.get('pin_entered')
-                            socketio.sleep(0.5) # Simulated delay
+                            socketio.sleep(0.5)
                             login_success = bool(username_from_state and correct_pin and entered_pin == correct_pin)
                             print(f"[Login] SID: {sid} - Verification Result: {'Success' if login_success else 'FAILED'}")
 
-                            # Emit result FIRST
-                            emit('login_result', {'success': login_success}, room=sid)
+                            if login_success: # Generate and emit token
+                                token = secrets.token_urlsafe(16)
+                                expiry_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=TOKEN_EXPIRY_SECONDS)
+                                login_tokens[token] = {'username': username_from_state, 'expires': expiry_time}
+                                print(f"[Login] SID: {sid} - Generated token: {token} for '{username_from_state}'")
+                                emit('login_result', {'success': True, 'token': token}, room=sid)
+                            else: # Emit failure
+                                emit('login_result', {'success': False}, room=sid)
 
-                            # *** DELAY State Cleanup Slightly ***
-                            if login_success:
-                                # Define a function to remove state after a delay
-                                def delayed_cleanup(client_sid):
-                                    socketio.sleep(2.0) # Wait 2 seconds
-                                    print(f"[Login Cleanup] Removing state for SID: {client_sid} after successful login.")
-                                    client_states.pop(client_sid, None)
+                            # Clean up state immediately (no delay needed)
+                            print(f"[Login Cleanup] Removing state for SID: {sid} after verify.")
+                            state['mode'] = None; client_states.pop(sid, None); return
+                        else: # PIN not complete, emit update
+                             emit('pin_update', { 'current_digit': PIN_DIGITS[state['pin_index']], 'pin_so_far': '*' * len(state['pin_entered']) }, room=sid)
+                state['blink_counter'] = 0
+        else: state['blink_counter'] = 0
 
-                                # Start the delayed cleanup in a background task
-                                print(f"[Login Cleanup] Scheduling delayed state removal for SID: {sid}")
-                                socketio.start_background_task(delayed_cleanup, sid)
-                                # Return immediately - don't set mode=None here yet
-                                # The background task will clean up later.
-                                return
-                            else:
-                                # On failure, can probably clean up state immediately
-                                print(f"[Login Cleanup] Removing state for SID: {sid} after failed login.")
-                                state['mode'] = None # Stop processing immediately on failure
-                                client_states.pop(sid, None) # Clean up immediately on failure
-                                return
-                state['blink_counter'] = 0 # Reset counter if eyes open or blink debounced
-        else: state['blink_counter'] = 0 # Reset counter if face lost
-
-        # --- Draw EAR & Threshold Text ---
+        # Draw EAR & Threshold Text
         cv2.putText(frame, f"EAR: {avgEAR:.3f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         cv2.putText(frame, f"Thresh: {BLINK_THRESH:.3f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
 
-        # --- Encode & Emit Processed Frame ---
+        # Encode & Emit Processed Frame
         try:
             ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
             if ret: processed_frame_data_url = "data:image/jpeg;base64," + base64.b64encode(buffer.tobytes()).decode('utf-8')
@@ -361,14 +404,15 @@ def handle_frame(dataURL):
             emit('pin_frame_update', { 'image_data': processed_frame_data_url,
                 'current_digit': PIN_DIGITS[state['pin_index']], 'pin_so_far': '*' * len(state['pin_entered']) }, room=sid)
 
+
 # ==============================================================================
 # ========================== END OF handle_frame ===============================
 # ==============================================================================
 
+
 # --- Main Execution ---
 if __name__ == '__main__':
     print("--- Starting ATM Simulation Server ---")
-    # ... (Keep print statements for paths and loaded faces) ...
     print(f"Known faces dir: {os.path.abspath(KNOWN_FACES_DIR)}")
     print(f"User data file: {os.path.abspath(USER_DATA_FILE)}")
     print(f"Shape predictor: {os.path.abspath(DLIB_SHAPE_PREDICTOR)}")
