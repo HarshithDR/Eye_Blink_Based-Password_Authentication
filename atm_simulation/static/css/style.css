@@ -251,3 +251,24 @@ h1, h2 {
     box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
     transform: scale(1.05); /* Slightly larger */
 }
+
+
+#video-feed-container {
+    margin-top: 15px;
+    margin-bottom: 20px;
+    width: 480px; /* Match video/img width */
+    height: 360px; /* Match video/img height */
+    display: inline-block; /* Center */
+    position: relative; /* If needed for overlays later */
+    border: 1px solid #ddd;
+    background-color: #222; /* Dark background */
+}
+
+/* Ensure video and image fill the container */
+#video-feed-container video,
+#video-feed-container img {
+    display: block; /* Remove extra space below */
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Cover area, might crop slightly */
+}

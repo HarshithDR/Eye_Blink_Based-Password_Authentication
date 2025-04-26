@@ -15,23 +15,26 @@
          <div id="login-area">
              <div id="status-message">Initializing...</div>
 
-             <!-- Welcome message area (hidden initially) -->
              <div id="welcome-message" style="display: none;">
                  <h2>Welcome, <span id="recognized-user-name"></span>!</h2>
              </div>
 
-             <div id="video-container">
-                 <video id="video" width="480" height="360" autoplay muted></video>
+             <!-- Container for video feeds -->
+             <div id="video-feed-container">
+                 <!-- Live feed (shown during recognition) -->
+                 <video id="video" width="480" height="360" autoplay muted style="display: block;"></video>
                  <canvas id="canvas" width="480" height="360" style="display: none;"></canvas>
+                 <!-- Processed feed (shown during PIN entry) -->
+                 <img id="processed_feed" src="" alt="Processed Video Feed" width="480" height="360" style="display: none; border: 1px solid lightblue;">
              </div>
+
 
              <!-- PIN Entry Area with Visual Keypad (hidden initially) -->
              <div id="pin-entry-area" style="display: none;">
+                 <!-- ... (keep keypad structure as before) ... -->
                  <h3>Enter PIN by Blinking on Highlighted Digit</h3>
                  <div id="pin-display">PIN: <span id="pin-so-far"></span></div>
-
                  <div class="keypad-container">
-                     <!-- Use data-digit attribute for easy JS selection -->
                      <div class="keypad-button" id="keypad-1" data-digit="1">1</div>
                      <div class="keypad-button" id="keypad-2" data-digit="2">2</div>
                      <div class="keypad-button" id="keypad-3" data-digit="3">3</div>
@@ -41,19 +44,16 @@
                      <div class="keypad-button" id="keypad-7" data-digit="7">7</div>
                      <div class="keypad-button" id="keypad-8" data-digit="8">8</div>
                      <div class="keypad-button" id="keypad-9" data-digit="9">9</div>
-                     <div class="keypad-button keypad-empty"></div> <!-- Empty cell for layout -->
+                     <div class="keypad-button keypad-empty"></div>
                      <div class="keypad-button" id="keypad-0" data-digit="0">0</div>
-                     <div class="keypad-button keypad-empty"></div> <!-- Empty cell for layout -->
+                     <div class="keypad-button keypad-empty"></div>
                  </div>
-                 <!-- Old highlight text removed -->
-                 <!-- <div id="pin-digit-highlight">Focus on: <span id="current-digit">_</span></div> -->
              </div>
          </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
-        // Initialize specifically for user login page
         setupUserLoginPage();
     </script>
 </body>

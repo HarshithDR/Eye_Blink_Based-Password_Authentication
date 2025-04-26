@@ -181,39 +181,68 @@ function connectSocketIO(pageType) { // pageType: 'admin' or 'user_login'
     // -- User Login Page Handlers --
     socket.on('login_status', (data) => {
         console.log("[SocketIO] Received 'login_status':", data);
-        setText('status-message', data.message); // Update general status
+        setText('status-message', data.message);
+
+        const liveVideo = getElement('video');
+        const processedFeed = getElement('processed_feed');
 
         if (data.status === 'pin_entry') {
             setText('recognized-user-name', data.user || 'User');
             showElement('welcome-message');
             showElement('pin-entry-area');
+            // *** Switch to processed feed view ***
+            hideElement('video'); // Hide live feed
+            showElement('processed_feed'); // Show image tag for processed frames
+            // Set initial PIN display and highlight
             const pinLength = (typeof data.pin_so_far === 'string') ? data.pin_so_far.length : 0;
             setText('pin-so-far', '*'.repeat(pinLength));
             updateKeypadHighlight(data.current_digit);
-            // Refine status message
             setText('status-message', 'Face recognized! Blink on highlighted digit.');
         } else {
-            // If not pin_entry, hide PIN elements
+            // If status is not pin_entry (e.g., recognizing, verifying, error), hide PIN elements
             hideElement('pin-entry-area');
             hideElement('welcome-message');
+            // *** Switch back to live feed view ***
+            showElement('video'); // Show live feed
+            hideElement('processed_feed'); // Hide processed image tag
+            processedFeed.src = ""; // Clear old image src
         }
         if (data.status === 'error') {
-            console.error("[SocketIO] Backend reported login error:", data.message);
+            console.error("[SocketIO] Backend login error:", data.message);
             stopWebcam();
+            // Ensure UI is reset
+             hideElement('pin-entry-area'); hideElement('welcome-message');
+             showElement('video'); hideElement('processed_feed');
         }
     });
 
+    socket.on('pin_frame_update', (data) => {
+        // This message arrives continuously during PIN mode
+        const processedFeed = getElement('processed_feed');
+        if (processedFeed && data.image_data) {
+            processedFeed.src = data.image_data; // Update the displayed image
+        }
+        // Update PIN display and highlight based on data in this message
+        const pinLength = (typeof data.pin_so_far === 'string') ? data.pin_so_far.length : 0;
+        setText('pin-so-far', '*'.repeat(pinLength));
+        updateKeypadHighlight(data.current_digit);
+    });
+
     socket.on('pin_update', (data) => {
-        // console.log("[SocketIO] Received 'pin_update':", data); // Verbose
+        console.log("[SocketIO] Received 'pin_update' (likely after blink):", data);
         const pinLength = (typeof data.pin_so_far === 'string') ? data.pin_so_far.length : 0;
         setText('pin-so-far', '*'.repeat(pinLength));
         updateKeypadHighlight(data.current_digit);
     });
 
     socket.on('login_result', (data) => {
+        // (Keep login_result logic the same - handles redirect)
         console.log("[SocketIO] Received 'login_result':", data);
         stopWebcam();
+        // Ensure UI is reset before redirecting
         hideElement('pin-entry-area'); hideElement('welcome-message');
+        showElement('video'); hideElement('processed_feed'); getElement('processed_feed').src="";
+
         if (data.success) {
             setText('status-message', 'Login Successful! Redirecting...');
             setTimeout(() => { window.location.href = '/user_dashboard'; }, 1500);
@@ -223,7 +252,7 @@ function connectSocketIO(pageType) { // pageType: 'admin' or 'user_login'
         }
     });
 
-} // End of connectSocketIO function
+} // End of connectSocketIO
 
 // --- Page Specific Setup Functions ---
 function setupAdminPage() {

@@ -23,8 +23,8 @@ DLIB_SHAPE_PREDICTOR = 'shape_predictor_68_face_landmarks.dat'
 # Blink Detection Constants
 # *** YOU WILL LIKELY NEED TO ADJUST BLINK_THRESH ***
 # Add print(f" Avg EAR: {avgEAR:.4f}") in PIN mode to find your values
-BLINK_THRESH = 0.45      # STARTING GUESS - Adjust based on your printed EAR values
-BLINK_CONSEC_FRAMES = 3  # Require 3 consecutive frames below threshold for a blink
+BLINK_THRESH = 0.10      # STARTING GUESS - Adjust based on your printed EAR values
+BLINK_CONSEC_FRAMES = 1 # Require 3 consecutive frames below threshold for a blink
 
 # Face Recognition Constants
 FACE_REC_TOLERANCE = 0.55 # Stricter tolerance (adjust if needed, lower is stricter)
@@ -32,7 +32,7 @@ FACE_REC_TOLERANCE = 0.55 # Stricter tolerance (adjust if needed, lower is stric
 # PIN Entry Constants
 PIN_LENGTH = 4
 PIN_DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-PIN_CYCLE_DELAY = 1.5 # Seconds to highlight each digit
+PIN_CYCLE_DELAY = 2 # Seconds to highlight each digit
 
 # --- Flask & SocketIO Setup ---
 app = Flask(__name__)
@@ -308,14 +308,15 @@ def handle_start_user_login():
 @socketio.on('frame_data')
 def handle_frame(dataURL):
     sid = request.sid
-    if sid not in client_states or not client_states[sid].get('mode'): return # Ignore if no active mode
+    if sid not in client_states or not client_states[sid].get('mode'): return
 
     state = client_states[sid]
     mode = state['mode']
-    # print(f"Frame from {sid} in mode: {mode}") # Very verbose log
 
     frame = decode_image(dataURL)
     if frame is None: return
+
+    processed_frame_data_url = None
 
     # --- Admin Face Capture Mode ---
     if mode == 'admin_capture':
@@ -432,97 +433,129 @@ def handle_frame(dataURL):
 
     # --- PIN Entry via Blink Mode ---
     elif mode == 'pin':
-        # print(f"[User Login] SID: {sid} - Processing frame in 'pin' mode.") # Verbose
+        # print(f"[User Login] SID: {sid} - PIN mode frame.") # Verbose
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_detector(gray_frame)
 
-        # --- PIN Digit Cycling ---
+        # --- PIN Digit Cycling (remains the same) ---
         current_time = time.time()
         if current_time - state.get('pin_last_cycle_time', 0) > PIN_CYCLE_DELAY:
             state['pin_index'] = (state['pin_index'] + 1) % len(PIN_DIGITS)
             state['pin_last_cycle_time'] = current_time
-            # print(f"[User Login] SID: {sid} - Highlighting digit: {PIN_DIGITS[state['pin_index']]}") # Verbose
-            emit('pin_update', {
+            # Emit update separately, as we now send frame data too
+            socketio.emit('pin_update', {
                  'current_digit': PIN_DIGITS[state['pin_index']],
                  'pin_so_far': '*' * len(state['pin_entered'])
-            }, room=sid)
+            }, room=sid) # Use socketio.emit here
 
-        if not faces:
-            # print(f"[User Login] SID: {sid} - No face detected during PIN entry.") # Verbose
-            return # Skip blink detection if no face
+        avgEAR = -1.0 # Default EAR if no face/error
 
-        # --- Blink Detection ---
-        face = faces[0] # Assume first face is the user
-        shape = landmark_predictor(gray_frame, face)
-        shape = face_utils.shape_to_np(shape)
+        if faces:
+            face = faces[0] # Process first face
+            shape = landmark_predictor(gray_frame, face)
+            shape = face_utils.shape_to_np(shape)
 
-        try:
-            leftEye = shape[L_start:L_end]
-            rightEye = shape[R_start:R_end]
-            leftEAR = calculate_EAR(leftEye)
-            rightEAR = calculate_EAR(rightEye)
-            avgEAR = (leftEAR + rightEAR) / 2.0
-            # *** PRINT EAR FOR DEBUGGING ***
-            print(f"[User Login] SID: {sid} - Avg EAR: {avgEAR:.4f} (Thresh: {BLINK_THRESH})")
-        except Exception as e:
-             print(f"Error calculating EAR for SID {sid}: {e}")
-             avgEAR = 1.0 # Assume eyes open on error
+            try:
+                leftEye = shape[L_start:L_end]
+                rightEye = shape[R_start:R_end]
+                leftEAR = calculate_EAR(leftEye)
+                rightEAR = calculate_EAR(rightEye)
+                avgEAR = (leftEAR + rightEAR) / 2.0
 
-        # Check if eyes are closed
-        if avgEAR < BLINK_THRESH:
-            state['blink_counter'] = state.get('blink_counter', 0) + 1
-            # print(f"[User Login] SID: {sid} - Blink counter: {state['blink_counter']}") # Verbose
-        else:
-            # Eyes are open, check if a blink *just finished*
-            if state.get('blink_counter', 0) >= BLINK_CONSEC_FRAMES:
-                debounce_time = 0.7 # Time required between blinks
-                if current_time - state.get('last_blink_time', 0) > debounce_time:
-                    # --- BLINK REGISTERED ---
-                    selected_digit = PIN_DIGITS[state['pin_index']]
-                    state['pin_entered'] += selected_digit
-                    state['last_blink_time'] = current_time # Update time of this successful blink
-                    print(f"[User Login] SID: {sid} - **** BLINK REGISTERED! Digit: {selected_digit}, PIN: {'*' * len(state['pin_entered'])} ****")
+                # *** DRAWING Landmarks ***
+                # Draw landmarks on the *color* frame
+                for (x, y) in leftEye:
+                    cv2.circle(frame, (x, y), 2, (0, 255, 0), -1) # Green dots
+                for (x, y) in rightEye:
+                    cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
 
-                    # Reset cycle timer and index immediately after selection
-                    state['pin_index'] = 0
-                    state['pin_last_cycle_time'] = current_time # Start next cycle timer now
+                # Optional: Draw bounding box for eyes (helps visualize area)
+                # l_min_x, l_min_y = np.min(leftEye, axis=0)
+                # l_max_x, l_max_y = np.max(leftEye, axis=0)
+                # cv2.rectangle(frame, (l_min_x, l_min_y), (l_max_x, l_max_y), (0, 255, 255), 1)
+                # (Repeat for rightEye if desired)
 
-                    # --- Check PIN completion ---
-                    if len(state['pin_entered']) == PIN_LENGTH:
-                        print(f"[User Login] SID: {sid} - PIN entry complete. Verifying...")
-                        state['mode'] = 'verifying' # Prevent further processing
-                        emit('login_status', {'status': 'verifying', 'message': 'Verifying PIN...'}, room=sid)
+            except Exception as e:
+                 print(f"Error calculating EAR or drawing landmarks for SID {sid}: {e}")
+                 avgEAR = -2.0 # Indicate calculation error
 
-                        # --- Verification Logic ---
-                        user_data = load_user_data()
-                        correct_pin = user_data.get(state.get('user'), {}).get('pin')
-                        entered_pin = state.get('pin_entered')
+            # --- Blink Detection Logic (using calculated avgEAR) ---
+            # print(f"[User Login] SID: {sid} - Avg EAR: {avgEAR:.4f} (Thresh: {BLINK_THRESH})") # Keep printing EAR
 
-                        # Use a slight delay for feedback
-                        socketio.sleep(0.5) # Use socketio.sleep for async delay
+            if avgEAR >= 0 and avgEAR < BLINK_THRESH: # Check EAR is valid before comparing
+                state['blink_counter'] = state.get('blink_counter', 0) + 1
+            else:
+                if state.get('blink_counter', 0) >= BLINK_CONSEC_FRAMES:
+                    debounce_time = 0.7
+                    if current_time - state.get('last_blink_time', 0) > debounce_time:
+                        # --- BLINK REGISTERED ---
+                        selected_digit = PIN_DIGITS[state['pin_index']]
+                        state['pin_entered'] += selected_digit
+                        state['last_blink_time'] = current_time
+                        print(f"[User Login] SID: {sid} - **** BLINK REGISTERED! Digit: {selected_digit}, PIN: {'*' * len(state['pin_entered'])} ****")
 
-                        if correct_pin and entered_pin == correct_pin:
-                            print(f"[User Login] SID: {sid} - PIN CORRECT for '{state.get('user')}'!")
-                            # Session should already be set from recognition phase
-                            print(f"[User Login] SID: {sid} - Session username before emit: {session.get('username')}")
-                            emit('login_result', {'success': True}, room=sid)
+                        state['pin_index'] = 0 # Reset index
+                        state['pin_last_cycle_time'] = current_time # Reset timer
+
+                        if len(state['pin_entered']) == PIN_LENGTH:
+                            print(f"[User Login] SID: {sid} - PIN complete. Verifying...")
+                            state['mode'] = 'verifying'
+                            emit('login_status', {'status': 'verifying', 'message': 'Verifying PIN...'}, room=sid)
+                            # ... (Verification logic -> emit login_result) ...
+                            # (Keep verification logic as before)
+                            user_data = load_user_data()
+                            correct_pin = user_data.get(state.get('user'), {}).get('pin')
+                            entered_pin = state.get('pin_entered')
+                            socketio.sleep(0.5) # Delay
+                            if correct_pin and entered_pin == correct_pin:
+                                emit('login_result', {'success': True}, room=sid)
+                            else:
+                                emit('login_result', {'success': False}, room=sid)
+                            state['mode'] = None # Stop processing
+                            return
                         else:
-                            print(f"[User Login] SID: {sid} - !!! PIN INCORRECT for '{state.get('user')}' !!! (Entered: {'*' * len(entered_pin)}, Expected: {'*' * len(correct_pin if correct_pin else '')})")
-                            emit('login_result', {'success': False}, room=sid)
-                        # Important: Stop processing after verification attempt
-                        state['mode'] = None
-                        return
+                            # Update UI (highlight and PIN string) after successful blink but PIN not complete
+                            emit('pin_update', {
+                                'current_digit': PIN_DIGITS[state['pin_index']],
+                                'pin_so_far': '*' * len(state['pin_entered'])
+                            }, room=sid)
+                # Reset blink counter if eyes are open or blink was debounced
+                state['blink_counter'] = 0
+        else:
+            # No face detected in PIN mode
+             state['blink_counter'] = 0 # Reset counter if face is lost
 
-                    else:
-                        # Update UI with new PIN state and reset highlight to first digit
-                        emit('pin_update', {
-                            'current_digit': PIN_DIGITS[state['pin_index']], # Should be '1' now
-                            'pin_so_far': '*' * len(state['pin_entered'])
-                        }, room=sid)
-                # else: print(f"[User Login] SID: {sid} - Blink detected, but debounced.") # Verbose
 
-            # *** Reset blink counter whenever eyes are open ***
-            state['blink_counter'] = 0
+        # *** DRAWING EAR Value ***
+        cv2.putText(frame, f"EAR: {avgEAR:.3f}", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2) # Red text
+        # Draw threshold line value for reference
+        cv2.putText(frame, f"Thresh: {BLINK_THRESH:.3f}", (10, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+
+        # *** Encode the processed frame (with drawings) ***
+        try:
+            ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80]) # Encode as JPEG, quality 80
+            if ret:
+                frame_bytes = buffer.tobytes()
+                processed_frame_data_url = "data:image/jpeg;base64," + base64.b64encode(frame_bytes).decode('utf-8')
+            else:
+                print(f"Error encoding processed frame for SID {sid}")
+        except Exception as e:
+             print(f"Exception encoding processed frame for SID {sid}: {e}")
+
+
+        # *** Emit Processed Frame for PIN mode ***
+        if processed_frame_data_url:
+            # Send frame data along with current digit/pin state in one message
+            # This replaces the separate 'pin_update' emission during normal cycling
+            # (though the separate 'pin_update' IS still needed after a blink is registered)
+            emit('pin_frame_update', {
+                'image_data': processed_frame_data_url,
+                'current_digit': PIN_DIGITS[state['pin_index']],
+                'pin_so_far': '*' * len(state['pin_entered'])
+                }, room=sid)
+
 
 
 # --- Main Execution ---
