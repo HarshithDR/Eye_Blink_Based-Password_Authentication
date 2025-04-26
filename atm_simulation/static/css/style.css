@@ -152,3 +152,102 @@ h1, h2 {
     border-radius: 4px;
     background-color: #fff;
 }
+
+
+/* Status & Welcome Messages */
+#status-message {
+    margin-top: 15px;
+    font-weight: bold;
+    min-height: 20px;
+    font-size: 1.1em;
+    color: #555;
+}
+
+#welcome-message {
+    margin: 20px 0;
+    font-size: 1.4em;
+    color: #28a745; /* Green color for welcome */
+    font-weight: bold;
+}
+
+#welcome-message span {
+    color: #1a7431; /* Darker green for name */
+}
+
+/* Video Container */
+#video-container {
+    margin-top: 15px;
+    margin-bottom: 20px; /* Add some space below video */
+    border: 1px solid #ddd;
+    display: inline-block; /* To center it */
+    background-color: #000; /* Black background in case video takes time */
+}
+
+/* PIN Entry Area */
+#pin-entry-area {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    max-width: 300px; /* Limit width of keypad area */
+    margin-left: auto;  /* Center the area */
+    margin-right: auto; /* Center the area */
+}
+
+#pin-entry-area h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1em;
+    color: #666;
+}
+
+#pin-display {
+    font-size: 1.3em;
+    margin-bottom: 20px;
+    letter-spacing: 8px; /* Space out asterisks */
+    font-weight: bold;
+    color: #333;
+    min-height: 30px; /* Ensure space even when empty */
+    background-color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+/* Keypad Styling */
+.keypad-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 columns */
+    gap: 10px; /* Space between buttons */
+    margin-top: 15px;
+}
+
+.keypad-button {
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    padding: 15px 0; /* Vertical padding */
+    text-align: center;
+    font-size: 1.6em;
+    font-weight: bold;
+    color: #495057;
+    border-radius: 5px;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    cursor: default; /* Indicate not clickable */
+    user-select: none; /* Prevent text selection */
+}
+
+/* Style for empty cells if needed, otherwise they just take space */
+.keypad-button.keypad-empty {
+    background-color: transparent;
+    border: none;
+}
+
+/* Highlight style for the active keypad button */
+.keypad-button.highlighted {
+    background-color: #007bff; /* Bootstrap primary blue */
+    border-color: #0056b3;
+    color: #fff; /* White text */
+    box-shadow: 0 0 8px rgba(0, 123, 255, 0.5);
+    transform: scale(1.05); /* Slightly larger */
+}
