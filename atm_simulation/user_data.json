@@ -1,0 +1,8 @@
+{
+    "harshith": {
+        "pin": "1234",
+        "balance": 123081.0,
+        "encoding_path": "static/known_faces\\harshith\\harshith_encoding.npy",
+        "image_path": "/static/known_faces/harshith/face.jpg"
+    }
+}
