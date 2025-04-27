@@ -1,0 +1,12 @@
+# .dockerignore
+Dockerfile
+.dockerignore
+*.pyc
+__pycache__/
+.git/
+.gitignore
+*.md
+.venv/
+venv/
+*.env
+# Add any other files/folders you don't need in the final image

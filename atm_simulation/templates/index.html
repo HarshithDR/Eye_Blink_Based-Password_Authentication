@@ -3,16 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATM Simulation</title>
+    <title>ATM Simulation - Welcome</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Link to your existing CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
 </head>
 <body>
-    <div class="container">
-        <h1>Welcome to ATM Simulation</h1>
+    <!-- Add specific class for index page container -->
+    <div class="container index-container animated">
+        <h1>Welcome to Secure ATM</h1>
+        <p class="tagline">Authenticate securely using Face & Blink Recognition</p>
         <div class="button-container">
-            <a href="{{ url_for('user_login') }}" class="btn">User Login</a>
-            <a href="{{ url_for('admin') }}" class="btn">Admin Panel</a>
+            <!-- Add classes and icons to buttons -->
+            <a href="{{ url_for('user_login') }}" class="btn btn-user">
+                <i class="fas fa-user"></i> User Login
+            </a>
+            <a href="{{ url_for('admin') }}" class="btn btn-admin">
+                <i class="fas fa-user-shield"></i> Admin Panel
+            </a>
         </div>
     </div>
+
+    <!-- You can keep your main.js link here if needed for global stuff,
+         but this page doesn't require specific JS functionality from it. -->
+    <!-- <script src="{{ url_for('static', filename='js/main.js') }}"></script> -->
 </body>
 </html>

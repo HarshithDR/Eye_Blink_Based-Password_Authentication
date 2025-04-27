@@ -1,13 +1,136 @@
 body {
-    font-family: sans-serif;
-    background-color: #f4f4f4;
+    font-family: 'Poppins', sans-serif;
+    /* Nice subtle gradient background */
+    background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 40%, #80deea 100%);
+    /* Keep centering */
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     margin: 0;
+    color: #333; /* Default text color */
+    overflow-x: hidden; /* Prevent horizontal scroll from animations */
 }
 
+/* --- Container Base (Keep general styles if needed) --- */
+.container {
+    background-color: #ffffff; /* Keep white */
+    padding: 30px 40px;
+    border-radius: 12px; /* More rounded corners */
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); /* Softer shadow */
+    text-align: center;
+    max-width: 600px;
+    width: 90%;
+    position: relative;
+    /* Basic transition for potential future animations */
+    transition: all 0.3s ease;
+}
+
+/* --- Index Page Specific Styles --- */
+.index-container {
+    max-width: 550px; /* Slightly smaller for index */
+    padding: 45px 50px; /* More padding */
+    /* Animation */
+    opacity: 0; /* Start hidden */
+    transform: translateY(20px); /* Start slightly lower */
+    animation: fadeInUp 0.8s 0.2s ease-out forwards; /* name duration delay timing fill-mode */
+}
+
+/* Fade-in Up Animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.index-container h1 {
+    color: #005f73; /* Tealish blue */
+    margin-bottom: 15px;
+    font-size: 2.4em;
+    font-weight: 700; /* Bolder */
+}
+
+.tagline {
+    color: #5a6268;
+    margin-bottom: 40px; /* More space before buttons */
+    font-size: 1.1em;
+    font-weight: 300; /* Lighter weight */
+}
+
+/* --- Button Container on Index Page --- */
+.index-container .button-container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center; /* Center buttons */
+    gap: 25px; /* Space between buttons */
+    flex-wrap: wrap; /* Allow wrapping */
+}
+
+/* --- Improved Button Styles (General, but can be scoped with .index-container .btn if needed) --- */
+.btn { /* Resetting and enhancing base button */
+    display: inline-flex; /* Align icon and text */
+    align-items: center;
+    justify-content: center;
+    padding: 15px 35px; /* Generous padding */
+    font-size: 1.1em;
+    font-weight: 600; /* Medium bold */
+    text-decoration: none;
+    color: #fff; /* White text */
+    border: none;
+    border-radius: 8px; /* Consistent rounded corners */
+    cursor: pointer;
+    transition: all 0.3s ease; /* Smooth transitions */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Base shadow */
+    min-width: 200px; /* Ensure buttons have good width */
+    text-align: center;
+}
+
+.btn i { /* Icon styles */
+    margin-right: 10px; /* Space icon from text */
+    font-size: 1.1em; /* Icon size relative to text */
+    line-height: 1; /* Ensure vertical alignment */
+}
+
+.btn:hover {
+    transform: translateY(-4px) scale(1.03); /* Lift and slightly enlarge */
+    box-shadow: 0 7px 18px rgba(0, 0, 0, 0.18); /* Enhanced shadow on hover */
+}
+
+.btn:active {
+    transform: translateY(-1px) scale(1.01); /* Press down effect */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* --- Specific Button Colors for Index Page --- */
+.index-container .btn-user {
+    background-color: #007bff; /* Primary blue */
+}
+.index-container .btn-user:hover {
+    background-color: #0056b3; /* Darker blue */
+}
+
+.index-container .btn-admin {
+    background-color: #2a9d8f; /* Teal color */
+}
+.index-container .btn-admin:hover {
+    background-color: #218378; /* Darker teal */
+}
+
+
+/* --- Ensure these styles don't break other pages --- */
+/* Add styles for other pages' containers/buttons if needed */
+/* For example: */
+.container.dashboard { /* Keep dashboard styles */
+    max-width: 700px; text-align: left;
+}
+.container.login-container { /* Keep login styles */
+     max-width: 900px;
+}
 
 .container.login-container {
     max-width: 900px; /* Adjust as needed for side-by-side view */

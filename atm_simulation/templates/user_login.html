@@ -3,36 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Login</title>
+    <title>ATM User Login</title> <!-- More specific title -->
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome (Optional - if you want icons later) -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" ... /> -->
+
+    <!-- Link to your CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 </head>
 <body>
-    <!-- Make the main container potentially wider -->
+    <!-- Add specific class for login page container -->
     <div class="container login-container">
          <a href="{{ url_for('index') }}" class="btn back-btn">< Back</a>
-         <h1>User Login</h1>
+         <h1>User Authentication</h1> <!-- Changed title slightly -->
 
          <div id="login-area">
-             <div id="status-message">Initializing...</div>
+             <!-- Status Message - Prominent -->
+             <div id="status-message" class="status-box">Initializing...</div>
 
+             <!-- Welcome Message (hidden initially) -->
              <div id="welcome-message" style="display: none;">
                  <h2>Welcome, <span id="recognized-user-name"></span>!</h2>
              </div>
 
-             <!-- *** New Parent Container for Side-by-Side Layout *** -->
+             <!-- Flex Container for Video and PIN -->
              <div class="login-flex-container">
 
                  <!-- Video Feed Area -->
-                 <div id="video-feed-container">
+                 <div id="video-feed-container" class="video-card"> <!-- Add video-card class -->
                      <video id="video" width="480" height="360" autoplay muted style="display: block;"></video>
                      <canvas id="canvas" width="480" height="360" style="display: none;"></canvas>
-                     <img id="processed_feed" src="" alt="Processed Video Feed" width="480" height="360" style="display: none; border: 1px solid lightblue;">
+                     <img id="processed_feed" src="" alt="Processed Video Feed" width="480" height="360" style="display: none;">
                  </div>
 
-                 <!-- PIN Entry Area (Now adjacent to video) -->
-                 <div id="pin-entry-area" style="display: none;">
-                     <h3>Enter PIN by Blinking</h3>
+                 <!-- PIN Entry Area Card (hidden initially) -->
+                 <div id="pin-entry-area" class="pin-card" style="display: none;"> <!-- Add pin-card class -->
+                     <h3>Enter PIN</h3>
+                     <p class="pin-instructions">Blink on the highlighted number</p>
                      <div id="pin-display">PIN: <span id="pin-so-far"></span></div>
                      <div class="keypad-container">
                          <div class="keypad-button" id="keypad-1" data-digit="1">1</div>
@@ -57,6 +71,7 @@
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
+        // Ensure this is called to set up the page's JS logic
         setupUserLoginPage();
     </script>
 </body>

@@ -1,0 +1,13 @@
+# requirements.txt
+Flask
+Flask-SocketIO
+simple-websocket
+opencv-python
+dlib
+numpy
+face_recognition
+imutils
+scipy
+eventlet
+requests # Often useful, good to have
+gunicorn # Optional but good practice for running Flask apps
